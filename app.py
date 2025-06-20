@@ -38,11 +38,15 @@ def list_submissions_files():
     files = glob.glob('submissions/pinout_*.json')
     files.sort(reverse=True)
     submissions = []
+    base_url = request.url_root.rstrip('/')  # Gets the base URL, e.g., https://pinout-api.onrender.com
     for file in files:
         with open(file, 'r', encoding='utf-8') as f:
             data = json.load(f)
+        filename = os.path.basename(file)
+        download_link = f"{base_url}/download-submission/{filename}"
         submissions.append({
-            "filename": os.path.basename(file),
+            "filename": filename,
+            "download_link": download_link,
             "data": data
         })
     return jsonify(submissions)
