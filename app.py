@@ -21,7 +21,24 @@ def submit_pinout():
         json.dump(data, f, ensure_ascii=False, indent=2)
 
     return jsonify({'status': 'success', 'message': 'Pinout submitted!'}), 200
+    
+@app.route('/list-submissions', methods=['GET'])
+def list_submissions():
+    files = glob.glob('submissions/pinout_*.json')
+    files.sort(reverse=True)
+    submissions = []
+    for file in files:
+        with open(file, 'r', encoding='utf-8') as f:
+            submissions.append(json.load(f))
+    return jsonify(submissions)
 
+@app.route('/download-submission/<filename>', methods=['GET'])
+def download_submission(filename):
+    path = f'submissions/{filename}'
+    if os.path.exists(path):
+        return send_file(path, as_attachment=True)
+    else:
+        return jsonify({'error': 'File not found'}), 404 
 @app.route('/', methods=['GET'])
 def home():
     return "Pinout Submission API is running."
