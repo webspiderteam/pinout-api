@@ -33,6 +33,20 @@ def list_submissions():
             submissions.append(json.load(f))
     return jsonify(submissions)
 
+@app.route('/list-submissions-files', methods=['GET'])
+def list_submissions_files():
+    files = glob.glob('submissions/pinout_*.json')
+    files.sort(reverse=True)
+    submissions = []
+    for file in files:
+        with open(file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        submissions.append({
+            "filename": os.path.basename(file),
+            "data": data
+        })
+    return jsonify(submissions)
+
 @app.route('/download-submission/<filename>', methods=['GET'])
 def download_submission(filename):
     path = f'submissions/{filename}'
