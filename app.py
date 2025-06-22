@@ -21,6 +21,8 @@ def create_pr_with_submission(submission_data):
     repo = g.get_repo(REPO_NAME)
     import time
     branch_name = f"submission-{int(time.time())}"
+    timestamp = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+    submission_filename = f"pinout_{timestamp}.json"
 
     temp_dir = tempfile.mkdtemp()
     try:
@@ -29,25 +31,18 @@ def create_pr_with_submission(submission_data):
             check=True
         )
         subprocess.run(["git", "checkout", "-b", branch_name], cwd=temp_dir, check=True)
-        pinouts_path = os.path.join(temp_dir, "pinouts.json")
-        # Load or create pinouts.json
-        if os.path.exists(pinouts_path):
-            with open(pinouts_path, "r", encoding="utf-8") as f:
-                pinouts = json.load(f)
-        else:
-            pinouts = []
-        # Append new submission
-        pinouts.append(submission_data)
-        # Save back
-        with open(pinouts_path, "w", encoding="utf-8") as f:
-            json.dump(pinouts, f, ensure_ascii=False, indent=2)
-        subprocess.run(["git", "add", "pinouts.json"], cwd=temp_dir, check=True)
+        submissions_dir = os.path.join(temp_dir, "submissions")
+        os.makedirs(submissions_dir, exist_ok=True)
+        submission_path = os.path.join(submissions_dir, submission_filename)
+        with open(submission_path, "w", encoding="utf-8") as f:
+            json.dump(submission_data, f, ensure_ascii=False, indent=2)
+        subprocess.run(["git", "add", f"submissions/{submission_filename}"], cwd=temp_dir, check=True)
         subprocess.run(["git", "config", "user.email", "pinout-bot@users.noreply.github.com"], cwd=temp_dir, check=True)
         subprocess.run(["git", "config", "user.name", "Pinout Bot"], cwd=temp_dir, check=True)
-        subprocess.run(["git", "commit", "-m", "Add new pinout submission"], cwd=temp_dir, check=True)
+        subprocess.run(["git", "commit", "-m", f"Add pinout submission {submission_filename}"], cwd=temp_dir, check=True)
         subprocess.run(["git", "push", "origin", branch_name], cwd=temp_dir, check=True)
         pr = repo.create_pull(
-            title="New pinout submission",
+            title=f"New pinout submission: {submission_filename}",
             body="Automated submission from API.",
             head=branch_name,
             base="main"
