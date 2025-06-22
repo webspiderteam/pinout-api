@@ -33,6 +33,9 @@ def create_pr_with_submission(submission_data, filename):
         with open(os.path.join(submissions_dir, filename), "w", encoding="utf-8") as f:
             json.dump(submission_data, f, ensure_ascii=False, indent=2)
         subprocess.run(["git", "add", "submissions/" + filename], cwd=temp_dir, check=True)
+        # Set git user identity for commits
+        subprocess.run(["git", "config", "user.email", "pinout-bot@users.noreply.github.com"], cwd=temp_dir, check=True)
+        subprocess.run(["git", "config", "user.name", "Pinout Bot"], cwd=temp_dir, check=True)
         subprocess.run(["git", "commit", "-m", f"Add submission {filename}"], cwd=temp_dir, check=True)
         subprocess.run(["git", "push", "origin", branch_name], cwd=temp_dir, check=True)
         pr = repo.create_pull(
