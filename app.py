@@ -16,10 +16,11 @@ REPO_NAME = "webspiderteam/laptop-battery-pinouts"  # Change if needed
 # Ensure submissions directory exists (for local backup, optional)
 os.makedirs("submissions", exist_ok=True)
 
-def create_pr_with_submission(submission_data, filename):
+def create_pr_with_submission(submission_data):
     g = Github(GITHUB_TOKEN)
     repo = g.get_repo(REPO_NAME)
-    branch_name = f"submission-{filename.replace('.json', '')}"
+    import time
+    branch_name = f"submission-{int(time.time())}"
 
     temp_dir = tempfile.mkdtemp()
     try:
@@ -28,18 +29,25 @@ def create_pr_with_submission(submission_data, filename):
             check=True
         )
         subprocess.run(["git", "checkout", "-b", branch_name], cwd=temp_dir, check=True)
-        submissions_dir = os.path.join(temp_dir, "submissions")
-        os.makedirs(submissions_dir, exist_ok=True)
-        with open(os.path.join(submissions_dir, filename), "w", encoding="utf-8") as f:
-            json.dump(submission_data, f, ensure_ascii=False, indent=2)
-        subprocess.run(["git", "add", "submissions/" + filename], cwd=temp_dir, check=True)
-        # Set git user identity for commits
+        pinouts_path = os.path.join(temp_dir, "pinouts.json")
+        # Load or create pinouts.json
+        if os.path.exists(pinouts_path):
+            with open(pinouts_path, "r", encoding="utf-8") as f:
+                pinouts = json.load(f)
+        else:
+            pinouts = []
+        # Append new submission
+        pinouts.append(submission_data)
+        # Save back
+        with open(pinouts_path, "w", encoding="utf-8") as f:
+            json.dump(pinouts, f, ensure_ascii=False, indent=2)
+        subprocess.run(["git", "add", "pinouts.json"], cwd=temp_dir, check=True)
         subprocess.run(["git", "config", "user.email", "pinout-bot@users.noreply.github.com"], cwd=temp_dir, check=True)
         subprocess.run(["git", "config", "user.name", "Pinout Bot"], cwd=temp_dir, check=True)
-        subprocess.run(["git", "commit", "-m", f"Add submission {filename}"], cwd=temp_dir, check=True)
+        subprocess.run(["git", "commit", "-m", "Add new pinout submission"], cwd=temp_dir, check=True)
         subprocess.run(["git", "push", "origin", branch_name], cwd=temp_dir, check=True)
         pr = repo.create_pull(
-            title=f"New pinout submission: {filename}",
+            title="New pinout submission",
             body="Automated submission from API.",
             head=branch_name,
             base="main"
@@ -58,12 +66,12 @@ def submit_pinout():
     if not data:
         return jsonify({'status': 'error', 'message': 'No data provided'}), 400
 
-    filename = generate_filename()
     # Optionally save locally for backup
+    filename = generate_filename()
     with open(os.path.join("submissions", filename), 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     try:
-        pr_url = create_pr_with_submission(data, filename)
+        pr_url = create_pr_with_submission(data)
         return jsonify({'status': 'success', 'message': 'Pinout submitted!', 'pr_url': pr_url}), 200
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
